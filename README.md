@@ -13,6 +13,10 @@ YouTube Data APIを利用した動画コメントの感情分析・集計シス�
 - Streamlitによる可視化
 - Docker Composeによる簡単なセットアップ
 
+## 作者
+
+- 遠藤義之
+
 ## 前提条件
 
 - Docker / Docker Compose
@@ -91,6 +95,11 @@ docker compose exec app python main.py --video-ids VIDEO_ID1,VIDEO_ID2,VIDEO_ID3
 ```
 
 ### Webインターフェース
+
+### 起動後のアクセスURL
+
+- Streamlit: http://localhost:8501
+- Adminer: http://localhost:8080
 
 #### Streamlit（可視化ダッシュボード）
 
