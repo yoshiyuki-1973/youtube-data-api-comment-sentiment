@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": "dQw4w9WgXcQ",
+      "snippet": {
+        "title": "Test Video Title",
+        "channelId": "UC38IQsAvIsxxjztdMZQtwHA",
+        "channelTitle": "Test Channel",
+        "publishedAt": "2025-01-01T00:00:00Z",
+        "description": "This is a test video description."
+      },
+      "statistics": {
+        "viewCount": "1000000",
+        "likeCount": "50000",
+        "commentCount": "10000"
+      }
+    }
+  ]
+}

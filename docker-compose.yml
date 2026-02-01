@@ -1,0 +1,85 @@
+services:
+  streamlit:
+    build: .
+    container_name: youtube-analytics-streamlit
+    command: python -m debugpy --listen 0.0.0.0:5678 -m streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+      - "5678:5678"
+    volumes:
+      - ./app:/app
+      - ./data/json:/app/data/json
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - COMMENT_LIMIT=${COMMENT_LIMIT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - youtube-analytics-network
+
+  app:
+    build: .
+    container_name: youtube-analytics-app
+    command: sleep infinity
+    tty: true
+    volumes:
+      - ./app:/app
+      - ./data/json:/app/data/json
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - COMMENT_LIMIT=${COMMENT_LIMIT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - youtube-analytics-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: youtube-analytics-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    # ports:
+    #   - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - youtube-analytics-network
+
+  adminer:
+    image: adminer:latest
+    container_name: youtube-analytics-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    networks:
+      - youtube-analytics-network
+
+networks:
+  youtube-analytics-network:
+    driver: bridge

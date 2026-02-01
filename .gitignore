@@ -1,0 +1,61 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Temporary files
+*.tmp.*
+*~
+
+# Virtual environment
+env/
+
+# IDE
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+REVIEW_SUMMARY.md
+CLAUDE.md
+CLAUDE.md.tmp*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Data (keep directories, ignore contents)
+data/mysql/*
+data/json/*
+!data/mysql/.gitkeep
+!data/json/.gitkeep
+
+# Logs
+logs/*.log
+
+# fastText model
+*.bin
+*.vec
+
+# Transformers models (HuggingFaceキャッシュは除外)
+.cache/
+huggingface/
+
+# Trained models (大容量のためGit管理外)
+models/
+!models/README.md
+
+# OS
+.DS_Store
+Thumbs.db
