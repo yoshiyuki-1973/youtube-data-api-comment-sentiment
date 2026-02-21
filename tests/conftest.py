@@ -89,18 +89,6 @@ def mock_sentiment_classify():
 
 
 @pytest.fixture
-def mock_db_connection():
-    """DB connection mock fixture."""
-    with patch('repository.mysql.get_connection') as mock_get_conn:
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_get_conn.return_value = mock_conn
-        mock_conn.cursor.return_value = mock_cursor
-        mock_conn.is_connected.return_value = True
-        yield {'connection': mock_conn, 'cursor': mock_cursor}
-
-
-@pytest.fixture
 def sample_video():
     """Sample video data."""
     return {

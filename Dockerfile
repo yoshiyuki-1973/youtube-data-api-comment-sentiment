@@ -12,9 +12,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y \
     gcc \
-    g++ \
-    default-libmysqlclient-dev \
-    pkg-config
+    g++
 
 # Copy only requirements first for better layer caching
 COPY requirements.txt .
@@ -26,7 +24,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     rm /tmp/requirements_filtered.txt
 
 # Create directories
-RUN mkdir -p /app/data/json /app/logs
+RUN mkdir -p /app/logs
 
 # Copy application code last (changes most frequently)
 COPY app/ .

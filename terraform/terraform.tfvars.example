@@ -1,0 +1,17 @@
+# このファイルをコピーして terraform.tfvars を作成してください
+# cp terraform.tfvars.example terraform.tfvars
+
+# Container Registry名（グローバルで一意にすること、英数字小文字のみ）
+acr_name = "youtubesentimentacr"
+
+# YouTube Data API v3キー
+youtube_api_key = "YOUR_YOUTUBE_API_KEY"
+
+# オプション（デフォルト値を変更する場合のみ）
+# subscription_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# resource_group_name = "rg-youtube-sentiment"
+# acr_sku             = "Basic"
+# location            = "japaneast"
+# comment_limit       = 100
+# container_cpu       = 2.0
+# container_memory    = "4Gi"

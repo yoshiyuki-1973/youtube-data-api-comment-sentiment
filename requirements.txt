@@ -1,9 +1,6 @@
 # YouTube Data API
 google-api-python-client==2.111.0
 
-# MySQL
-mysql-connector-python==8.2.0
-
 # Sentiment Analysis
 transformers==4.36.2
 torch==2.1.2

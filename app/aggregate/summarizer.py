@@ -74,11 +74,11 @@ def aggregate_video(video: dict, comments: list[dict]) -> dict:
         else:
             other_count += 1
     
-    # Calculate ratios (for DB storage)
+    # Calculate ratios
     positive_ratio = round(positive_count / total_comments, 4)
     negative_ratio = round(negative_count / total_comments, 4)
     
-    # Calculate average scores (for display/compatibility)
+    # Calculate average scores
     positive_score = round(positive_sum / total_comments, 4)
     negative_score = round(negative_sum / total_comments, 4)
     neutral_score = round(neutral_sum / total_comments, 4)
@@ -86,13 +86,13 @@ def aggregate_video(video: dict, comments: list[dict]) -> dict:
     summary = {
         'video_id': video_id,
         'total_comments': total_comments,
-        # Counts and ratios (for MySQL)
+        # Counts and ratios
         'positive_count': positive_count,
         'negative_count': negative_count,
         'other_count': other_count,
         'positive_ratio': positive_ratio,
         'negative_ratio': negative_ratio,
-        # Average scores (for display/compatibility)
+        # Average scores
         'positive_score': positive_score,
         'negative_score': negative_score,
         'neutral_score': neutral_score,

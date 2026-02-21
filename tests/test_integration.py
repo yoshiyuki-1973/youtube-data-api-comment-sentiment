@@ -6,10 +6,6 @@ Run with: docker compose exec app pytest tests/test_integration.py -v -m integra
 
 import sys
 import os
-import json
-import tempfile
-from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -18,108 +14,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'app'))
 
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration
-
-
-class TestDatabaseIntegration:
-    """Integration tests for database operations."""
-
-    @pytest.fixture
-    def mock_db_env(self, monkeypatch):
-        """Set up mock environment for DB testing."""
-        monkeypatch.setenv('MYSQL_HOST', 'localhost')
-        monkeypatch.setenv('MYSQL_PORT', '3306')
-        monkeypatch.setenv('MYSQL_DATABASE', 'youtube_analytics_test')
-        monkeypatch.setenv('MYSQL_USER', 'test_user')
-        monkeypatch.setenv('MYSQL_PASSWORD', 'test_password')
-
-    def test_save_and_get_video(self, mock_db_connection):
-        """Test video UPSERT and retrieval."""
-        from repository.mysql import save_video, get_video
-
-        video_data = {
-            'video_id': 'test123',
-            'title': 'Test Video Title',
-            'channel_id': 'UC123',
-            'channel_title': 'Test Channel',
-            'published_at': '2025-01-01T00:00:00Z',
-            'view_count': 1000,
-            'like_count': 100,
-            'comment_count': 50,
-            'fetched_at': datetime.now().isoformat()
-        }
-
-        # Mock cursor execute
-        mock_cursor = mock_db_connection['cursor']
-        mock_cursor.fetchone.return_value = video_data
-
-        # Test save
-        save_video(video_data)
-        assert mock_cursor.execute.called
-
-        # Test get
-        result = get_video('test123')
-        assert result is not None
-        assert result['video_id'] == 'test123'
-
-    def test_save_and_get_summary(self, mock_db_connection):
-        """Test summary UPSERT and retrieval."""
-        from repository.mysql import save_summary, get_summary
-
-        summary_data = {
-            'video_id': 'test123',
-            'total_comments': 100,
-            'positive_count': 60,
-            'negative_count': 30,
-            'other_count': 10,
-            'positive_ratio': 0.6,
-            'negative_ratio': 0.3,
-            'analyzed_at': datetime.now().isoformat()
-        }
-
-        mock_cursor = mock_db_connection['cursor']
-        mock_cursor.fetchone.return_value = summary_data
-
-        # Test save
-        save_summary(summary_data)
-        assert mock_cursor.execute.called
-
-        # Test get
-        result = get_summary('test123')
-        assert result is not None
-        assert result['video_id'] == 'test123'
-
-    def test_video_upsert_updates_existing(self, mock_db_connection):
-        """Test that saving a video twice updates instead of duplicating."""
-        from repository.mysql import save_video
-
-        video_data = {
-            'video_id': 'test123',
-            'title': 'Original Title',
-            'channel_id': 'UC123',
-            'channel_title': 'Test Channel',
-            'published_at': '2025-01-01T00:00:00Z',
-            'view_count': 1000,
-            'like_count': 100,
-            'comment_count': 50,
-            'fetched_at': datetime.now().isoformat()
-        }
-
-        mock_cursor = mock_db_connection['cursor']
-
-        # First save
-        save_video(video_data)
-
-        # Update and save again
-        video_data['title'] = 'Updated Title'
-        video_data['view_count'] = 2000
-        save_video(video_data)
-
-        # Verify UPSERT SQL was used (ON DUPLICATE KEY UPDATE)
-        calls = mock_cursor.execute.call_args_list
-        for call in calls:
-            sql = call[0][0]
-            if 'INSERT INTO videos' in sql:
-                assert 'ON DUPLICATE KEY UPDATE' in sql
 
 
 class TestSentimentPipelineIntegration:
@@ -200,77 +94,6 @@ class TestSentimentPipelineIntegration:
         assert 'analyzed_at' in summary
 
 
-class TestJSONCacheIntegration:
-    """Integration tests for JSON cache functionality."""
-
-    @pytest.fixture
-    def temp_json_dir(self):
-        """Create a temporary directory for JSON cache testing."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            yield Path(tmpdir)
-
-    def test_write_and_read_json_cache(self, temp_json_dir, sample_video, sample_comments):
-        """Test writing and reading JSON cache files."""
-        video_id = sample_video['video_id']
-        cache_file = temp_json_dir / f'{video_id}.json'
-
-        # Create cache data
-        cache_data = {
-            'video': sample_video,
-            'comments': sample_comments,
-            'fetched_at': datetime.now().isoformat()
-        }
-
-        # Write cache
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(cache_data, f, ensure_ascii=False, indent=2)
-
-        assert cache_file.exists()
-
-        # Read cache
-        with open(cache_file, 'r', encoding='utf-8') as f:
-            loaded = json.load(f)
-
-        assert loaded['video']['video_id'] == video_id
-        assert len(loaded['comments']) == len(sample_comments)
-
-    def test_json_cache_with_utf8mb4_characters(self, temp_json_dir):
-        """Test JSON cache handles UTF-8 MB4 (emoji) correctly."""
-        cache_file = temp_json_dir / 'emoji_test.json'
-
-        data = {
-            'video_id': 'emoji123',
-            'title': '絵文字テスト 🎉✨💖',
-            'comments': [
-                {'text': '最高！👍', 'sentiment': {'positive': 0.9, 'negative': 0.05, 'neutral': 0.05}},
-                {'text': '😡💢', 'sentiment': {'positive': 0.1, 'negative': 0.8, 'neutral': 0.1}},
-            ]
-        }
-
-        # Write
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        # Read
-        with open(cache_file, 'r', encoding='utf-8') as f:
-            loaded = json.load(f)
-
-        assert '🎉' in loaded['title']
-        assert '👍' in loaded['comments'][0]['text']
-        assert '😡' in loaded['comments'][1]['text']
-
-    def test_json_cache_directory_structure(self, temp_json_dir):
-        """Test creating cache in nested directory structure."""
-        nested_dir = temp_json_dir / 'data' / 'json'
-        nested_dir.mkdir(parents=True, exist_ok=True)
-
-        cache_file = nested_dir / 'test_video.json'
-        cache_file.write_text('{"test": true}', encoding='utf-8')
-
-        assert cache_file.exists()
-        assert json.loads(cache_file.read_text())['test'] is True
-
-
 class TestFallbackModeIntegration:
     """Integration tests for fallback mode behavior."""
 
@@ -334,34 +157,6 @@ class TestFallbackModeIntegration:
 
 class TestEndToEndFlow:
     """End-to-end flow tests."""
-
-    def test_complete_analysis_flow_mocked(
-        self, sample_video, sample_comments, mock_db_connection
-    ):
-        """Test complete flow from input to DB save (mocked)."""
-        from sentiment.analyzer import _classify_comment_rules_only
-        from aggregate.summarizer import aggregate_video
-        from repository.mysql import save_video, save_summary
-
-        # Step 1: Simulate video and comments already fetched
-        video = sample_video.copy()
-        comments = sample_comments.copy()
-
-        # Step 2: Classify comments
-        for comment in comments:
-            comment['sentiment'] = _classify_comment_rules_only(comment.get('text', ''))
-
-        # Step 3: Aggregate
-        summary = aggregate_video(video, comments)
-
-        # Step 4: Save to DB (mocked)
-        save_video(video)
-        save_summary(summary)
-
-        # Verify DB operations were called
-        mock_cursor = mock_db_connection['cursor']
-        assert mock_cursor.execute.called
-        assert mock_db_connection['connection'].commit.called
 
     def test_analysis_preserves_comment_metadata(self, sample_comments):
         """Test that analysis preserves original comment metadata."""

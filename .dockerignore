@@ -14,8 +14,7 @@ build/
 .gitignore
 
 # Data
-data/mysql/
-data/json/
+data/
 
 # Models (large files)
 models/
@@ -43,8 +42,6 @@ docs/
 
 # Docker
 docker-compose.yml
-docker-compose.prod.yml
-Dockerfile.prod
 
 # IDE
 .vscode/

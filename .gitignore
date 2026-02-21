@@ -35,11 +35,15 @@ CLAUDE.md.tmp*
 htmlcov/
 .tox/
 
-# Data (keep directories, ignore contents)
-data/mysql/*
-data/json/*
-!data/mysql/.gitkeep
-!data/json/.gitkeep
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+
+# Data (実行時生成ファイル)
+data/
 
 # Logs
 logs/*.log

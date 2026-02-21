@@ -19,8 +19,6 @@ from fetch.youtube import (
 )
 from sentiment.analyzer import classify_comments
 from aggregate.summarizer import aggregate_video
-from repository.mysql import save_video, save_summary, get_video, get_summary
-from utils.cache import save_json, load_json
 
 # Configure logging for Streamlit
 logging.basicConfig(
@@ -97,52 +95,17 @@ def get_comment_limit() -> int:
         return 10
 
 
-def analyze_video(video_id: str, comment_limit: int, use_cache: bool = True) -> dict | None:
+def analyze_video(video_id: str, comment_limit: int) -> dict | None:
     """
     Analyze a YouTube video.
 
     Args:
         video_id: YouTube video ID
         comment_limit: Number of comments to fetch
-        use_cache: Whether to use cached JSON data
 
     Returns:
         Analysis result dict or None if failed
     """
-    # Try to load from cache
-    if use_cache:
-        cached_data = load_json(video_id)
-        if cached_data:
-            logger.info(f'キャッシュデータを使用します: {video_id}')
-            # Validate sentiment data format
-            comments = cached_data.get('comments', [])
-            needs_reclassification = False
-
-            for comment in comments:
-                sentiment = comment.get('sentiment')
-                # Check if sentiment is valid dict with required keys
-                if not isinstance(sentiment, dict) or \
-                   not all(key in sentiment for key in ['positive', 'negative', 'neutral']):
-                    needs_reclassification = True
-                    logger.warning('キャッシュデータのsentiment形式が無効です。再分類します。')
-                    break
-
-            # Re-classify if sentiment data is invalid
-            if needs_reclassification:
-                comments = classify_comments(comments)
-                cached_data['comments'] = comments
-                save_json(video_id, cached_data)  # Update cache
-
-            video = {k: v for k, v in cached_data.items() if k != 'comments'}
-            summary = aggregate_video(video, comments)
-            save_video(video)
-            save_summary(summary)
-            return {
-                'video': video,
-                'comments': comments,
-                'summary': summary
-            }
-
     # Fetch video metadata
     video = fetch_video(video_id)
     if not video:
@@ -154,14 +117,6 @@ def analyze_video(video_id: str, comment_limit: int, use_cache: bool = True) -> 
 
     # Aggregate results
     summary = aggregate_video(video, comments)
-
-    # Save to JSON cache
-    data = {**video, 'comments': comments}
-    save_json(video_id, data)
-
-    # Save to database
-    save_video(video)
-    save_summary(summary)
 
     return {
         'video': video,
