@@ -97,7 +97,7 @@ az provider register --namespace Microsoft.OperationalInsights
 
 ## 3. ディレクトリ構成
 
-プロジェクトルートに `terraform/` ディレクトリを作成する。
+プロジェクトルートの `terraform/` ディレクトリ構成は以下の通り。
 
 ```
 youtube-data-api-comment-sentiment/
@@ -350,8 +350,9 @@ terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/*.tfvars
-terraform/.terraform.lock.hcl
 ```
+
+> **Note**: `terraform/.terraform.lock.hcl` はプロバイダーのバージョンを固定するロックファイルのため、**Gitに含める**（gitignoreしない）。
 
 ## 5. Dockerfile の調整
 
@@ -371,7 +372,9 @@ cp terraform.tfvars.example terraform.tfvars
 # terraform.tfvars を編集して acr_name と youtube_api_key を設定
 ```
 
-### Step 2: Terraform 初期化・実行
+### Step 2: ACR（コンテナレジストリ）だけ先に作成
+
+Container Appのデプロイ時にACRにイメージが存在している必要があるため、まずACRだけを作成する。
 
 ```bash
 # 初期化（プロバイダーのダウンロード）
@@ -380,32 +383,29 @@ terraform init
 # コードの整形（HCL標準スタイルに自動フォーマット）
 terraform fmt
 
-# 実行計画の確認（何が作成されるか確認）
-terraform plan
+# 実行計画の確認（ACRとリソースグループのみ）
+terraform plan -target="azurerm_resource_group.main" -target="azurerm_container_registry.main"
 
-# リソースの作成
-terraform apply
+# ACRとリソースグループだけ先に作成
+terraform apply -target="azurerm_resource_group.main" -target="azurerm_container_registry.main"
 
 # 確認プロンプトで yes を入力
 ```
 
 出力例:
 ```
-Apply complete! Resources: 5 added, 0 changed, 0 destroyed.
-
-Outputs:
-acr_login_server   = "youtubesentimentacr.azurecr.io"
-app_url            = "https://ca-youtube-sentiment.xxx.japaneast.azurecontainerapps.io"
-resource_group_name = "rg-youtube-sentiment"
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
 ```
 
 ### Step 3: Dockerイメージのビルド・プッシュ
+
+ACR作成後、**Container App作成より前に**イメージをプッシュする。
 
 ```bash
 # プロジェクトルートに戻る
 cd ..
 
-# ACRにログイン（terraform output からACR名を取得）
+# ACRにログイン
 az acr login --name youtubesentimentacr
 
 # イメージをビルド（ACR用タグ付き）
@@ -415,17 +415,31 @@ docker build -t youtubesentimentacr.azurecr.io/youtube-sentiment:latest .
 docker push youtubesentimentacr.azurecr.io/youtube-sentiment:latest
 ```
 
-### Step 4: Container App の更新
+### Step 4: 残りのリソースを作成（Container App等）
 
-イメージをプッシュした後、Container Appが自動的に最新イメージを取得する。
-手動で更新する場合：
+イメージのプッシュ完了後、残りのリソースをすべて作成する。
 
 ```bash
-# リビジョンの更新を強制
-az containerapp update \
-  --name ca-youtube-sentiment \
-  --resource-group rg-youtube-sentiment \
-  --image youtubesentimentacr.azurecr.io/youtube-sentiment:latest
+# terraform/ ディレクトリに戻る
+cd terraform
+
+# 実行計画の確認（残りの全リソース）
+terraform plan
+
+# 残りの全リソースを作成
+terraform apply
+
+# 確認プロンプトで yes を入力
+```
+
+出力例:
+```
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+acr_login_server    = "youtubesentimentacr.azurecr.io"
+app_url             = "https://ca-youtube-sentiment.xxx.japaneast.azurecontainerapps.io"
+resource_group_name = "rg-youtube-sentiment"
 ```
 
 ### Step 5: 動作確認
@@ -444,10 +458,13 @@ terraform output app_url
 # 1. イメージを再ビルド
 docker build -t youtubesentimentacr.azurecr.io/youtube-sentiment:latest .
 
-# 2. プッシュ
+# 2. ACRにログイン（セッションが切れている場合）
+az acr login --name youtubesentimentacr
+
+# 3. プッシュ
 docker push youtubesentimentacr.azurecr.io/youtube-sentiment:latest
 
-# 3. Container App を更新
+# 4. Container App を更新
 az containerapp update \
   --name ca-youtube-sentiment \
   --resource-group rg-youtube-sentiment \
@@ -462,6 +479,12 @@ az containerapp secret set \
   --name ca-youtube-sentiment \
   --resource-group rg-youtube-sentiment \
   --secrets youtube-api-key=NEW_API_KEY
+
+# シークレット変更後はリビジョンを再デプロイして反映
+az containerapp update \
+  --name ca-youtube-sentiment \
+  --resource-group rg-youtube-sentiment \
+  --image youtubesentimentacr.azurecr.io/youtube-sentiment:latest
 
 # COMMENT_LIMITの変更
 az containerapp update \
