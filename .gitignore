@@ -15,6 +15,7 @@ build/
 # Temporary files
 *.tmp.*
 *~
+*.obsidian*
 
 # Virtual environment
 env/
